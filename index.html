@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Net Worth Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<style>
+  /* ---- Palette tokens (validated categorical set, see dataviz skill) ---- */
+  :root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --good:           #006300;
+    --critical:       #d03b3b;
+    /* categorical slots, fixed order -- never reassigned per-view */
+    --cat-cash:    #2a78d6; /* slot 1 blue   */
+    --cat-equity:  #eb6834; /* slot 2 orange */
+    --cat-super:   #1baf7a; /* slot 3 aqua   */
+    --cat-etf:     #eda100; /* slot 4 yellow */
+    --cat-bond:    #e87ba4; /* slot 5 magenta*/
+    --cat-crypto:  #008300; /* slot 6 green  */
+    --cat-other:   #6250d6; /* slot 7 violet */
+    --seq-line:    #2a78d6; /* sequential blue, net worth trend */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --page-plane:     #0d0d0d;
+      --text-primary:   #f0efec;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --good:           #0ca30c;
+      --critical:       #e66767;
+      --cat-cash:    #3987e5;
+      --cat-equity:  #d95926;
+      --cat-super:   #199e70;
+      --cat-etf:     #c98500;
+      --cat-bond:    #d55181;
+      --cat-crypto:  #008300;
+      --cat-other:   #9085e9;
+      --seq-line:    #3987e5;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--page-plane);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  /* ---- Login screen ---- */
+  #login-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  #login-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    width: 100%;
+    max-width: 360px;
+  }
+  #login-card h1 { font-size: 18px; margin: 0 0 4px; }
+  #login-card p.sub { color: var(--text-secondary); font-size: 13px; margin: 0 0 20px; }
+  #login-card label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+  #login-card input {
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--page-plane);
+    color: var(--text-primary);
+    font-size: 14px;
+  }
+  #login-card button, .toggle-btn, .signout-btn {
+    font-family: inherit;
+    cursor: pointer;
+  }
+  #login-card button[type="submit"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 8px;
+    background: var(--seq-line);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  #login-error {
+    color: var(--critical);
+    font-size: 13px;
+    margin-top: 12px;
+    min-height: 1em;
+  }
+
+  /* ---- Dashboard shell ---- */
+  #dashboard { display: none; max-width: 920px; margin: 0 auto; padding: 24px 16px 64px; }
+  header.app-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  header.app-header h1 { font-size: 18px; margin: 0; }
+  .signout-btn {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+  }
+
+  .owner-toggle { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+  .toggle-btn {
+    border: 1px solid var(--border);
+    background: var(--surface-1);
+    color: var(--text-secondary);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+  }
+  .toggle-btn.active {
+    background: var(--seq-line);
+    color: #fff;
+    border-color: var(--seq-line);
+  }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .card h2 { font-size: 14px; color: var(--text-secondary); margin: 0 0 12px; font-weight: 600; }
+
+  #hero-number { font-size: 36px; font-weight: 700; line-height: 1.1; }
+  #hero-delta { font-size: 14px; margin-top: 4px; }
+  #hero-asof { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+
+  #liabilities-line {
+    font-size: 13px;
+    color: var(--critical);
+    margin-top: 10px;
+    display: none;
+  }
+
+  svg.chart { width: 100%; height: 240px; display: block; overflow: visible; }
+  .chart-tooltip {
+    position: absolute;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    pointer-events: none;
+    display: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    white-space: nowrap;
+  }
+  .chart-wrap { position: relative; }
+
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; }
+  .bar-swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .bar-label { width: 90px; flex: none; color: var(--text-secondary); }
+  .bar-track { flex: 1; background: var(--gridline); border-radius: 4px; height: 10px; position: relative; overflow: hidden; }
+  .bar-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 4px; }
+  .bar-value { width: 110px; flex: none; text-align: right; }
+
+  table.accounts-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.accounts-table th, table.accounts-table td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--gridline); }
+  table.accounts-table th { color: var(--text-muted); font-weight: 500; font-size: 12px; }
+  table.accounts-table td.num { text-align: right; }
+  table.accounts-table td.owner-tag {
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  #loading, #load-error { color: var(--text-secondary); font-size: 14px; padding: 40px 0; text-align: center; }
+  #load-error { color: var(--critical); display: none; }
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div id="login-card">
+    <h1>Net Worth Dashboard</h1>
+    <p class="sub">Sign in to view.</p>
+    <form id="login-form">
+      <label for="email">Email</label>
+      <input type="email" id="email" autocomplete="email" required>
+      <label for="password">Password</label>
+      <input type="password" id="password" autocomplete="current-password" required>
+      <button type="submit">Sign in</button>
+    </form>
+    <div id="login-error"></div>
+  </div>
+</div>
+
+<div id="dashboard">
+  <header class="app-header">
+    <h1>Net Worth Dashboard</h1>
+    <button class="signout-btn" id="signout-btn">Sign out</button>
+  </header>
+
+  <div class="owner-toggle" id="owner-toggle"></div>
+
+  <div id="loading">Loading your data&hellip;</div>
+  <div id="load-error"></div>
+
+  <div id="content" style="display:none;">
+    <div class="card">
+      <h2>Net worth</h2>
+      <div id="hero-number" class="tabular">&mdash;</div>
+      <div id="hero-delta" class="tabular"></div>
+      <div id="hero-asof"></div>
+      <div id="liabilities-line" class="tabular"></div>
+    </div>
+
+    <div class="card">
+      <h2>Net worth over time</h2>
+      <div class="chart-wrap">
+        <svg class="chart" id="trend-chart" viewBox="0 0 800 240" preserveAspectRatio="none"></svg>
+        <div class="chart-tooltip" id="trend-tooltip"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Breakdown by asset class</h2>
+      <div id="breakdown-bars"></div>
+    </div>
+
+    <div class="card">
+      <h2>Accounts</h2>
+      <table class="accounts-table">
+        <thead>
+          <tr><th>Account</th><th>Institution</th><th>Owner</th><th style="text-align:right;">Balance (AUD)</th></tr>
+        </thead>
+        <tbody id="accounts-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---- Fill in during setup (Project Settings -> API in Supabase) ----
+  const SUPABASE_URL = "https://qborrmoliufcwjnyycdi.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFib3JybW9saXVmY3dqbnl5Y2RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1Njk2MjMsImV4cCI6MjEwNDE0NTYyM30.a2BNLXvsRhO2jaQrAsMA7DKV-LNcTlyHpoFCrPm88HQ";
+
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Fixed categorical colour assignment -- keyed by instruments.asset_class,
+  // never cycled/reassigned per view (see dataviz skill: "color follows the
+  // entity, never its rank").
+  const ASSET_CLASS_COLOR = {
+    cash:   "var(--cat-cash)",
+    equity: "var(--cat-equity)",
+    super:  "var(--cat-super)",
+    etf:    "var(--cat-etf)",
+    bond:   "var(--cat-bond)",
+    crypto: "var(--cat-crypto)",
+    other:  "var(--cat-other)",
+  };
+  const ASSET_CLASS_LABEL = {
+    cash: "Cash", equity: "Equities", super: "Super", etf: "ETFs",
+    bond: "Bonds", crypto: "Crypto", other: "Other",
+  };
+
+  const fmtMoney = (n) => {
+    const v = Math.round(n || 0);
+    return (v < 0 ? "-$" : "$") + Math.abs(v).toLocaleString("en-AU");
+  };
+  const fmtMoneyShort = (n) => {
+    const abs = Math.abs(n);
+    if (abs >= 1e6) return (n < 0 ? "-$" : "$") + (abs / 1e6).toFixed(1) + "m";
+    if (abs >= 1e3) return (n < 0 ? "-$" : "$") + (abs / 1e3).toFixed(0) + "k";
+    return fmtMoney(n);
+  };
+  const fmtDate = (d) => new Date(d).toLocaleDateString("en-AU", { year: "numeric", month: "short", day: "numeric" });
+
+  // ---------------------------------------------------------------------
+  // Auth
+  // ---------------------------------------------------------------------
+  const loginScreen = document.getElementById("login-screen");
+  const dashboard = document.getElementById("dashboard");
+  const loginForm = document.getElementById("login-form");
+  const loginError = document.getElementById("login-error");
+
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    loginError.textContent = "";
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      loginError.textContent = error.message;
+    }
+  });
+
+  document.getElementById("signout-btn").addEventListener("click", async () => {
+    await sb.auth.signOut();
+  });
+
+  sb.auth.onAuthStateChange((_event, session) => {
+    if (session) {
+      loginScreen.style.display = "none";
+      dashboard.style.display = "block";
+      loadData();
+    } else {
+      loginScreen.style.display = "flex";
+      dashboard.style.display = "none";
+    }
+  });
+
+  // ---------------------------------------------------------------------
+  // Data loading
+  // ---------------------------------------------------------------------
+  let STATE = { household: null, byOwner: [], accounts: [], owners: [], current: "Household" };
+
+  async function loadData() {
+    const loading = document.getElementById("loading");
+    const errBox = document.getElementById("load-error");
+    const content = document.getElementById("content");
+    loading.style.display = "block";
+    errBox.style.display = "none";
+    content.style.display = "none";
+
+    try {
+      const [nwsRes, nwboRes, aoRes] = await Promise.all([
+        sb.from("net_worth_snapshot").select("*").order("snapshot_date"),
+        sb.from("net_worth_by_owner").select("*").order("snapshot_date"),
+        sb.from("account_ownership").select("account_id,owner_label"),
+      ]);
+      for (const r of [nwsRes, nwboRes, aoRes]) {
+        if (r.error) throw r.error;
+      }
+
+      const ownerLabelByAccount = {};
+      for (const row of aoRes.data) ownerLabelByAccount[row.account_id] = row.owner_label;
+
+      // Latest holdings_snapshot date, then every row for that date, with
+      // its parent account embedded (Supabase auto-detects the FK).
+      const latestDateRes = await sb
+        .from("holdings_snapshot")
+        .select("snapshot_date")
+        .order("snapshot_date", { ascending: false })
+        .limit(1);
+      if (latestDateRes.error) throw latestDateRes.error;
+      const latestDate = latestDateRes.data[0] ? latestDateRes.data[0].snapshot_date : null;
+
+      let accounts = [];
+      if (latestDate) {
+        const holdingsRes = await sb
+          .from("holdings_snapshot")
+          .select("account_id,market_value_base,accounts(name,institution,is_liability)")
+          .eq("snapshot_date", latestDate);
+        if (holdingsRes.error) throw holdingsRes.error;
+
+        const byAccount = {};
+        for (const row of holdingsRes.data) {
+          const acc = row.accounts;
+          if (!acc) continue;
+          const key = row.account_id;
+          if (!byAccount[key]) {
+            byAccount[key] = {
+              id: key,
+              name: acc.name,
+              institution: acc.institution,
+              is_liability: acc.is_liability,
+              total: 0,
+              owner: ownerLabelByAccount[key] || "—",
+            };
+          }
+          byAccount[key].total += Number(row.market_value_base || 0);
+        }
+        accounts = Object.values(byAccount).sort((a, b) => b.total - a.total);
+      }
+
+      const ownerLabels = Array.from(new Set(nwboRes.data.map((r) => r.owner_label))).sort();
+
+      STATE.household = nwsRes.data; // array of {snapshot_date, total_assets, total_liabilities, net_worth, by_asset_class, by_liability_class}
+      STATE.byOwner = nwboRes.data;  // array of {snapshot_date, owner_label, total_assets, by_asset_class, total_liabilities, net_worth}
+      STATE.accounts = accounts;
+      STATE.owners = ownerLabels;
+
+      buildOwnerToggle();
+      renderAll();
+
+      loading.style.display = "none";
+      content.style.display = "block";
+    } catch (err) {
+      console.error(err);
+      loading.style.display = "none";
+      errBox.textContent = "Couldn't load data: " + (err.message || err);
+      errBox.style.display = "block";
+    }
+  }
+
+  function buildOwnerToggle() {
+    const wrap = document.getElementById("owner-toggle");
+    wrap.innerHTML = "";
+    const options = ["Household", ...STATE.owners];
+    for (const opt of options) {
+      const btn = document.createElement("button");
+      btn.className = "toggle-btn" + (opt === STATE.current ? " active" : "");
+      btn.textContent = opt;
+      btn.addEventListener("click", () => {
+        STATE.current = opt;
+        buildOwnerToggle();
+        renderAll();
+      });
+      wrap.appendChild(btn);
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Rendering
+  // ---------------------------------------------------------------------
+  function currentSeries() {
+    // Returns an array of rows shaped like net_worth_snapshot, for
+    // whichever owner (or Household) is currently selected.
+    if (STATE.current === "Household") return STATE.household;
+    return STATE.byOwner.filter((r) => r.owner_label === STATE.current);
+  }
+
+  function renderAll() {
+    const series = currentSeries();
+    renderHero(series);
+    renderTrendChart(series);
+    renderBreakdown(series);
+    renderAccountsTable();
+  }
+
+  function renderHero(series) {
+    const heroNumber = document.getElementById("hero-number");
+    const heroDelta = document.getElementById("hero-delta");
+    const heroAsOf = document.getElementById("hero-asof");
+    const liabLine = document.getElementById("liabilities-line");
+
+    if (!series.length) {
+      heroNumber.textContent = "No data yet";
+      heroDelta.textContent = "";
+      heroAsOf.textContent = "";
+      liabLine.style.display = "none";
+      return;
+    }
+    const latest = series[series.length - 1];
+    heroNumber.textContent = fmtMoney(latest.net_worth);
+    heroAsOf.textContent = "As of " + fmtDate(latest.snapshot_date);
+
+    if (series.length > 1) {
+      const prev = series[series.length - 2];
+      const delta = latest.net_worth - prev.net_worth;
+      const up = delta >= 0;
+      heroDelta.innerHTML =
+        '<span style="color:' + (up ? "var(--good)" : "var(--critical)") + '">' +
+        (up ? "▲ " : "▼ ") + fmtMoney(Math.abs(delta)) +
+        "</span> since " + fmtDate(prev.snapshot_date);
+    } else {
+      heroDelta.textContent = "";
+    }
+
+    if (latest.total_liabilities && latest.total_liabilities > 0) {
+      liabLine.textContent = "⚠ Liabilities: " + fmtMoney(latest.total_liabilities);
+      liabLine.style.display = "block";
+    } else {
+      liabLine.style.display = "none";
+    }
+  }
+
+  function renderBreakdown(series) {
+    const wrap = document.getElementById("breakdown-bars");
+    wrap.innerHTML = "";
+    if (!series.length) {
+      wrap.textContent = "No data yet.";
+      return;
+    }
+    const latest = series[series.length - 1];
+    const byClass = latest.by_asset_class || {};
+    const entries = Object.entries(byClass).filter(([, v]) => v);
+    if (!entries.length) {
+      wrap.textContent = "No asset-class data yet.";
+      return;
+    }
+    const max = Math.max(...entries.map(([, v]) => v));
+    // Stable order: known classes first in their fixed slot order, then
+    // anything unrecognised appended (never reordered by value/rank).
+    const order = ["cash", "equity", "etf", "super", "bond", "crypto", "other"];
+    entries.sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
+
+    for (const [cls, value] of entries) {
+      const row = document.createElement("div");
+      row.className = "bar-row";
+      const color = ASSET_CLASS_COLOR[cls] || "var(--text-muted)";
+      const label = ASSET_CLASS_LABEL[cls] || cls;
+      const pct = max > 0 ? Math.max(2, (value / max) * 100) : 0;
+      row.innerHTML =
+        '<div class="bar-swatch" style="background:' + color + '"></div>' +
+        '<div class="bar-label">' + label + "</div>" +
+        '<div class="bar-track"><div class="bar-fill" style="width:' + pct + "%;background:" + color + ';"></div></div>' +
+        '<div class="bar-value tabular">' + fmtMoney(value) + "</div>";
+      wrap.appendChild(row);
+    }
+  }
+
+  function renderAccountsTable() {
+    const tbody = document.getElementById("accounts-tbody");
+    tbody.innerHTML = "";
+    const rows = STATE.current === "Household"
+      ? STATE.accounts
+      : STATE.accounts.filter((a) => a.owner === STATE.current);
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted);">No accounts to show.</td></tr>';
+      return;
+    }
+    for (const a of rows) {
+      const tr = document.createElement("tr");
+      const sign = a.is_liability ? -1 : 1;
+      tr.innerHTML =
+        "<td>" + a.name + "</td>" +
+        "<td>" + a.institution + "</td>" +
+        '<td class="owner-tag">' + a.owner + "</td>" +
+        '<td class="num tabular">' + fmtMoney(sign * a.total) + (a.is_liability ? " (owed)" : "") + "</td>";
+      tbody.appendChild(tr);
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Trend chart (hand-rolled SVG line chart -- single series, so no
+  // legend is needed; the card title names the series).
+  // ---------------------------------------------------------------------
+  function renderTrendChart(series) {
+    const svg = document.getElementById("trend-chart");
+    const tooltip = document.getElementById("trend-tooltip");
+    svg.innerHTML = "";
+
+    if (series.length < 2) {
+      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      text.setAttribute("x", "400");
+      text.setAttribute("y", "120");
+      text.setAttribute("text-anchor", "middle");
+      text.setAttribute("fill", "var(--text-muted)");
+      text.textContent = "Not enough history yet to chart a trend.";
+      svg.appendChild(text);
+      return;
+    }
+
+    const W = 800, H = 240, padL = 60, padR = 10, padT = 16, padB = 28;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+
+    const xs = series.map((r) => new Date(r.snapshot_date).getTime());
+    const ys = series.map((r) => r.net_worth);
+    const xMin = Math.min(...xs), xMax = Math.max(...xs);
+    const yMin = Math.min(0, Math.min(...ys));
+    const yMax = Math.max(...ys) * 1.1 || 1;
+
+    const xScale = (x) => padL + ((x - xMin) / (xMax - xMin || 1)) * plotW;
+    const yScale = (y) => padT + plotH - ((y - yMin) / (yMax - yMin || 1)) * plotH;
+
+    const ns = "http://www.w3.org/2000/svg";
+    const el = (tag, attrs) => {
+      const e = document.createElementNS(ns, tag);
+      for (const k in attrs) e.setAttribute(k, attrs[k]);
+      return e;
+    };
+
+    // Gridlines + y labels (4 bands)
+    const gridGroup = el("g", {});
+    const ticks = 4;
+    for (let i = 0; i <= ticks; i++) {
+      const v = yMin + (yMax - yMin) * (i / ticks);
+      const y = yScale(v);
+      gridGroup.appendChild(el("line", { x1: padL, x2: W - padR, y1: y, y2: y, stroke: "var(--gridline)", "stroke-width": "1" }));
+      const label = el("text", { x: padL - 8, y: y + 4, "text-anchor": "end", fill: "var(--text-muted)", "font-size": "11" });
+      label.textContent = fmtMoneyShort(v);
+      gridGroup.appendChild(label);
+    }
+    svg.appendChild(gridGroup);
+
+    // Baseline
+    svg.appendChild(el("line", { x1: padL, x2: W - padR, y1: yScale(0), y2: yScale(0), stroke: "var(--baseline)", "stroke-width": "1" }));
+
+    // Line path
+    let d = "";
+    const points = series.map((r, i) => [xScale(xs[i]), yScale(r.net_worth)]);
+    points.forEach(([x, y], i) => { d += (i === 0 ? "M" : "L") + x.toFixed(1) + "," + y.toFixed(1) + " "; });
+    svg.appendChild(el("path", { d: d.trim(), fill: "none", stroke: "var(--seq-line)", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" }));
+
+    // Last point marker
+    const [lx, ly] = points[points.length - 1];
+    svg.appendChild(el("circle", { cx: lx, cy: ly, r: "4", fill: "var(--seq-line)" }));
+
+    // X-axis: first/last date labels only, to stay legible regardless of
+    // how many statements are in the series.
+    svg.appendChild(el("text", { x: padL, y: H - 6, "text-anchor": "start", fill: "var(--text-muted)", "font-size": "11" })).textContent = fmtDate(series[0].snapshot_date);
+    svg.appendChild(el("text", { x: W - padR, y: H - 6, "text-anchor": "end", fill: "var(--text-muted)", "font-size": "11" })).textContent = fmtDate(series[series.length - 1].snapshot_date);
+
+    // Hover: invisible wide hit-rect + crosshair, nearest point by x.
+    const hitRect = el("rect", { x: padL, y: padT, width: plotW, height: plotH, fill: "transparent" });
+    const crosshair = el("line", { x1: 0, x2: 0, y1: padT, y2: padT + plotH, stroke: "var(--baseline)", "stroke-width": "1", style: "display:none" });
+    svg.appendChild(crosshair);
+    svg.appendChild(hitRect);
+
+    hitRect.addEventListener("mousemove", (evt) => {
+      const rect = svg.getBoundingClientRect();
+      const scaleX = W / rect.width;
+      const mouseX = (evt.clientX - rect.left) * scaleX;
+      let nearest = 0, best = Infinity;
+      points.forEach(([x], i) => { const dist = Math.abs(x - mouseX); if (dist < best) { best = dist; nearest = i; } });
+      const [px, py] = points[nearest];
+      crosshair.setAttribute("x1", px); crosshair.setAttribute("x2", px);
+      crosshair.style.display = "block";
+      const row = series[nearest];
+      tooltip.style.display = "block";
+      tooltip.style.left = (evt.clientX - rect.left + 12) + "px";
+      tooltip.style.top = (evt.clientY - rect.top - 10) + "px";
+      tooltip.innerHTML = "<strong>" + fmtMoney(row.net_worth) + "</strong><br>" + fmtDate(row.snapshot_date);
+    });
+    hitRect.addEventListener("mouseleave", () => {
+      crosshair.style.display = "none";
+      tooltip.style.display = "none";
+    });
+  }
+})();
+</script>
+</body>
+</html>
