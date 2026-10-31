@@ -19,15 +19,16 @@
     --border:         rgba(11,11,11,0.10);
     --good:           #006300;
     --critical:       #d03b3b;
-    /* categorical slots, fixed order -- never reassigned per-view */
-    --cat-cash:    #2a78d6; /* slot 1 blue   */
-    --cat-equity:  #eb6834; /* slot 2 orange */
-    --cat-super:   #1baf7a; /* slot 3 aqua   */
-    --cat-etf:     #eda100; /* slot 4 yellow */
-    --cat-bond:    #e87ba4; /* slot 5 magenta*/
-    --cat-crypto:  #008300; /* slot 6 green  */
-    --cat-other:   #6250d6; /* slot 7 violet */
-    --seq-line:    #2a78d6; /* sequential blue, net worth trend */
+    /* categorical slots, fixed order -- never reassigned by rank */
+    --series-1: #2a78d6; /* blue    */
+    --series-2: #eb6834; /* orange  */
+    --series-3: #1baf7a; /* aqua    */
+    --series-4: #eda100; /* yellow  */
+    --series-5: #e87ba4; /* magenta */
+    --series-6: #008300; /* green   */
+    --series-7: #6250d6; /* violet  */
+    --series-8: #e34948; /* red     */
+    --seq-line: #2a78d6; /* sequential blue, trend lines */
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -42,14 +43,15 @@
       --border:         rgba(255,255,255,0.10);
       --good:           #0ca30c;
       --critical:       #e66767;
-      --cat-cash:    #3987e5;
-      --cat-equity:  #d95926;
-      --cat-super:   #199e70;
-      --cat-etf:     #c98500;
-      --cat-bond:    #d55181;
-      --cat-crypto:  #008300;
-      --cat-other:   #9085e9;
-      --seq-line:    #3987e5;
+      --series-1: #3987e5;
+      --series-2: #d95926;
+      --series-3: #199e70;
+      --series-4: #c98500;
+      --series-5: #d55181;
+      --series-6: #008300;
+      --series-7: #9085e9;
+      --series-8: #e66767;
+      --seq-line: #3987e5;
     }
   }
 
@@ -91,7 +93,7 @@
     color: var(--text-primary);
     font-size: 14px;
   }
-  #login-card button, .toggle-btn, .signout-btn {
+  #login-card button, .toggle-btn, .signout-btn, .back-link {
     font-family: inherit;
     cursor: pointer;
   }
@@ -113,7 +115,7 @@
   }
 
   /* ---- Dashboard shell ---- */
-  #dashboard { display: none; max-width: 920px; margin: 0 auto; padding: 24px 16px 64px; }
+  #dashboard { display: none; max-width: 960px; margin: 0 auto; padding: 24px 16px 64px; }
   header.app-header {
     display: flex;
     align-items: baseline;
@@ -147,6 +149,19 @@
     border-color: var(--seq-line);
   }
 
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: none;
+    background: none;
+    color: var(--text-secondary);
+    font-size: 13px;
+    padding: 0;
+    margin-bottom: 16px;
+  }
+  .back-link:hover { color: var(--text-primary); }
+
   .card {
     background: var(--surface-1);
     border: 1px solid var(--border);
@@ -167,6 +182,30 @@
     display: none;
   }
 
+  /* ---- Range selector ---- */
+  .range-selector { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .range-selector .toggle-btn { padding: 5px 12px; }
+  .custom-range { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; font-size: 13px; color: var(--text-secondary); flex-wrap: wrap; }
+  .custom-range input[type="date"] {
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--page-plane);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 13px;
+  }
+  .custom-range button {
+    border: 1px solid var(--border);
+    background: var(--seq-line);
+    color: #fff;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
   svg.chart { width: 100%; height: 240px; display: block; overflow: visible; }
   .chart-tooltip {
     position: absolute;
@@ -179,24 +218,30 @@
     display: none;
     box-shadow: 0 2px 8px rgba(0,0,0,0.12);
     white-space: nowrap;
+    z-index: 5;
   }
   .chart-wrap { position: relative; }
 
-  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; }
+  /* ---- Donut + bars ---- */
+  .donut-wrap { display: flex; gap: 28px; flex-wrap: wrap; align-items: center; }
+  svg.donut { width: 200px; height: 200px; flex: none; display: block; }
+  .donut-and-bars { flex: 1; min-width: 220px; }
+
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; padding: 4px 6px; border-radius: 8px; }
+  .bar-row.clickable { cursor: pointer; }
+  .bar-row.clickable:hover { background: var(--gridline); }
   .bar-swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; }
-  .bar-label { width: 90px; flex: none; color: var(--text-secondary); }
+  .bar-label { width: 90px; flex: none; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .bar-track { flex: 1; background: var(--gridline); border-radius: 4px; height: 10px; position: relative; overflow: hidden; }
   .bar-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 4px; }
-  .bar-value { width: 110px; flex: none; text-align: right; }
+  .bar-value { width: 100px; flex: none; text-align: right; }
+  .bar-chevron { width: 12px; flex: none; color: var(--text-muted); text-align: right; }
 
   table.accounts-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   table.accounts-table th, table.accounts-table td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--gridline); }
   table.accounts-table th { color: var(--text-muted); font-weight: 500; font-size: 12px; }
   table.accounts-table td.num { text-align: right; }
-  table.accounts-table td.owner-tag {
-    color: var(--text-muted);
-    font-size: 12px;
-  }
+  table.accounts-table td.owner-tag { color: var(--text-muted); font-size: 12px; }
 
   #loading, #load-error { color: var(--text-secondary); font-size: 14px; padding: 40px 0; text-align: center; }
   #load-error { color: var(--critical); display: none; }
@@ -231,36 +276,7 @@
   <div id="load-error"></div>
 
   <div id="content" style="display:none;">
-    <div class="card">
-      <h2>Net worth</h2>
-      <div id="hero-number" class="tabular">&mdash;</div>
-      <div id="hero-delta" class="tabular"></div>
-      <div id="hero-asof"></div>
-      <div id="liabilities-line" class="tabular"></div>
-    </div>
-
-    <div class="card">
-      <h2>Net worth over time</h2>
-      <div class="chart-wrap">
-        <svg class="chart" id="trend-chart" viewBox="0 0 800 240" preserveAspectRatio="none"></svg>
-        <div class="chart-tooltip" id="trend-tooltip"></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Breakdown by asset class</h2>
-      <div id="breakdown-bars"></div>
-    </div>
-
-    <div class="card">
-      <h2>Accounts</h2>
-      <table class="accounts-table">
-        <thead>
-          <tr><th>Account</th><th>Institution</th><th>Owner</th><th style="text-align:right;">Balance (AUD)</th></tr>
-        </thead>
-        <tbody id="accounts-tbody"></tbody>
-      </table>
-    </div>
+    <div id="page-root"></div>
   </div>
 </div>
 
@@ -268,28 +284,35 @@
 (function () {
   "use strict";
 
-  // ---- Fill in during setup (Project Settings -> API in Supabase) ----
+  // ---- Supabase project (Project Settings -> API) ----
   const SUPABASE_URL = "https://qborrmoliufcwjnyycdi.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFib3JybW9saXVmY3dqbnl5Y2RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1Njk2MjMsImV4cCI6MjEwNDE0NTYyM30.a2BNLXvsRhO2jaQrAsMA7DKV-LNcTlyHpoFCrPm88HQ";
 
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // Fixed categorical colour assignment -- keyed by instruments.asset_class,
-  // never cycled/reassigned per view (see dataviz skill: "color follows the
-  // entity, never its rank").
+  // never reassigned by rank/value (dataviz skill: "color follows the
+  // entity, never its rank"). Slot 8 (red) is left spare for any asset
+  // class beyond this list.
   const ASSET_CLASS_COLOR = {
-    cash:   "var(--cat-cash)",
-    equity: "var(--cat-equity)",
-    super:  "var(--cat-super)",
-    etf:    "var(--cat-etf)",
-    bond:   "var(--cat-bond)",
-    crypto: "var(--cat-crypto)",
-    other:  "var(--cat-other)",
+    cash:   "var(--series-1)",
+    equity: "var(--series-2)",
+    super:  "var(--series-3)",
+    etf:    "var(--series-4)",
+    bond:   "var(--series-5)",
+    crypto: "var(--series-6)",
+    other:  "var(--series-7)",
   };
   const ASSET_CLASS_LABEL = {
     cash: "Cash", equity: "Equities", super: "Super", etf: "ETFs",
     bond: "Bonds", crypto: "Crypto", other: "Other",
   };
+  const ASSET_CLASS_ORDER = ["cash", "equity", "etf", "super", "bond", "crypto", "other"];
+  // Used for securities/accounts *within* a drill-down, where the set of
+  // entities is dynamic. Assigned by alphabetical identity (stable across
+  // re-renders and value changes), not by current size.
+  const SERIES_SLOTS = ["var(--series-1)", "var(--series-2)", "var(--series-3)", "var(--series-4)",
+                         "var(--series-5)", "var(--series-6)", "var(--series-7)", "var(--series-8)"];
 
   const fmtMoney = (n) => {
     const v = Math.round(n || 0);
@@ -302,6 +325,7 @@
     return fmtMoney(n);
   };
   const fmtDate = (d) => new Date(d).toLocaleDateString("en-AU", { year: "numeric", month: "short", day: "numeric" });
+  const fmtPct = (n) => n.toFixed(1) + "%";
 
   // ---------------------------------------------------------------------
   // Auth
@@ -317,9 +341,7 @@
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
     const { error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) {
-      loginError.textContent = error.message;
-    }
+    if (error) loginError.textContent = error.message;
   });
 
   document.getElementById("signout-btn").addEventListener("click", async () => {
@@ -340,7 +362,33 @@
   // ---------------------------------------------------------------------
   // Data loading
   // ---------------------------------------------------------------------
-  let STATE = { household: null, byOwner: [], accounts: [], owners: [], current: "Household" };
+  let STATE = {
+    household: [],       // net_worth_snapshot rows
+    byOwner: [],          // net_worth_by_owner rows
+    accounts: [],         // one row per account, at the latest holdings_snapshot date
+    owners: [],           // distinct owner_label values actually present
+    holdings: [],         // every holdings_snapshot row, flattened + joined client-side
+    latestHoldingsDate: null,
+    current: "Household", // owner toggle
+    range: { preset: "All", start: null, end: null },
+  };
+
+  // PostgREST caps a single response at (by default) 1000 rows. This
+  // dashboard's history will eventually exceed that, so every query pages
+  // through with .range() rather than assuming one request is everything.
+  async function fetchAll(buildQuery, pageSize) {
+    pageSize = pageSize || 1000;
+    let all = [];
+    let from = 0;
+    for (;;) {
+      const { data, error } = await buildQuery().range(from, from + pageSize - 1);
+      if (error) throw error;
+      all = all.concat(data);
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
+    return all;
+  }
 
   async function loadData() {
     const loading = document.getElementById("loading");
@@ -351,65 +399,62 @@
     content.style.display = "none";
 
     try {
-      const [nwsRes, nwboRes, aoRes] = await Promise.all([
-        sb.from("net_worth_snapshot").select("*").order("snapshot_date"),
-        sb.from("net_worth_by_owner").select("*").order("snapshot_date"),
-        sb.from("account_ownership").select("account_id,owner_label"),
+      const [household, byOwner, ownership] = await Promise.all([
+        fetchAll(() => sb.from("net_worth_snapshot").select("*").order("snapshot_date")),
+        fetchAll(() => sb.from("net_worth_by_owner").select("*").order("snapshot_date")),
+        fetchAll(() => sb.from("account_ownership").select("account_id,owner_label")),
       ]);
-      for (const r of [nwsRes, nwboRes, aoRes]) {
-        if (r.error) throw r.error;
-      }
 
       const ownerLabelByAccount = {};
-      for (const row of aoRes.data) ownerLabelByAccount[row.account_id] = row.owner_label;
+      for (const row of ownership) ownerLabelByAccount[row.account_id] = row.owner_label;
 
-      // Latest holdings_snapshot date, then every row for that date, with
-      // its parent account embedded (Supabase auto-detects the FK).
-      const latestDateRes = await sb
-        .from("holdings_snapshot")
-        .select("snapshot_date")
-        .order("snapshot_date", { ascending: false })
-        .limit(1);
-      if (latestDateRes.error) throw latestDateRes.error;
-      const latestDate = latestDateRes.data[0] ? latestDateRes.data[0].snapshot_date : null;
+      const rawHoldings = await fetchAll(() =>
+        sb.from("holdings_snapshot")
+          .select("account_id,symbol,snapshot_date,market_value_base,accounts(name,institution,is_liability),instruments(asset_class,display_name)")
+          .order("snapshot_date")
+          .order("account_id")
+          .order("symbol")
+      );
 
-      let accounts = [];
-      if (latestDate) {
-        const holdingsRes = await sb
-          .from("holdings_snapshot")
-          .select("account_id,market_value_base,accounts(name,institution,is_liability)")
-          .eq("snapshot_date", latestDate);
-        if (holdingsRes.error) throw holdingsRes.error;
+      const holdings = rawHoldings.map((r) => ({
+        account_id: r.account_id,
+        symbol: r.symbol,
+        snapshot_date: r.snapshot_date,
+        value: Number(r.market_value_base || 0),
+        asset_class: r.instruments ? r.instruments.asset_class : null,
+        display_name: (r.instruments && r.instruments.display_name) || r.symbol,
+        account_name: r.accounts ? r.accounts.name : "",
+        institution: r.accounts ? r.accounts.institution : "",
+        is_liability: !!(r.accounts && r.accounts.is_liability),
+        owner: ownerLabelByAccount[r.account_id] || "—",
+      }));
 
-        const byAccount = {};
-        for (const row of holdingsRes.data) {
-          const acc = row.accounts;
-          if (!acc) continue;
-          const key = row.account_id;
-          if (!byAccount[key]) {
-            byAccount[key] = {
-              id: key,
-              name: acc.name,
-              institution: acc.institution,
-              is_liability: acc.is_liability,
-              total: 0,
-              owner: ownerLabelByAccount[key] || "—",
-            };
-          }
-          byAccount[key].total += Number(row.market_value_base || 0);
-        }
-        accounts = Object.values(byAccount).sort((a, b) => b.total - a.total);
+      let latestHoldingsDate = null;
+      for (const h of holdings) {
+        if (!latestHoldingsDate || h.snapshot_date > latestHoldingsDate) latestHoldingsDate = h.snapshot_date;
       }
 
-      const ownerLabels = Array.from(new Set(nwboRes.data.map((r) => r.owner_label))).sort();
+      const byAccount = {};
+      for (const h of holdings) {
+        if (h.snapshot_date !== latestHoldingsDate) continue;
+        if (!byAccount[h.account_id]) {
+          byAccount[h.account_id] = {
+            id: h.account_id, name: h.account_name, institution: h.institution,
+            is_liability: h.is_liability, owner: h.owner, total: 0,
+          };
+        }
+        byAccount[h.account_id].total += h.value;
+      }
 
-      STATE.household = nwsRes.data; // array of {snapshot_date, total_assets, total_liabilities, net_worth, by_asset_class, by_liability_class}
-      STATE.byOwner = nwboRes.data;  // array of {snapshot_date, owner_label, total_assets, by_asset_class, total_liabilities, net_worth}
-      STATE.accounts = accounts;
-      STATE.owners = ownerLabels;
+      STATE.household = household;
+      STATE.byOwner = byOwner;
+      STATE.holdings = holdings;
+      STATE.latestHoldingsDate = latestHoldingsDate;
+      STATE.accounts = Object.values(byAccount).sort((a, b) => b.total - a.total);
+      STATE.owners = Array.from(new Set(byOwner.map((r) => r.owner_label))).sort();
 
       buildOwnerToggle();
-      renderAll();
+      rerender();
 
       loading.style.display = "none";
       content.style.display = "block";
@@ -432,30 +477,271 @@
       btn.addEventListener("click", () => {
         STATE.current = opt;
         buildOwnerToggle();
-        renderAll();
+        rerender();
       });
       wrap.appendChild(btn);
     }
   }
 
   // ---------------------------------------------------------------------
-  // Rendering
+  // Routing: "#" / no hash -> overview; "#class=<assetClass>" -> drill-down.
+  // ---------------------------------------------------------------------
+  function rerender() {
+    const m = /^#class=(.+)$/.exec(location.hash);
+    if (m) renderDrillDown(decodeURIComponent(m[1]));
+    else renderOverview();
+  }
+  window.addEventListener("hashchange", rerender);
+
+  // ---------------------------------------------------------------------
+  // Date-range filtering (shared across whichever trend chart is showing)
+  // ---------------------------------------------------------------------
+  function addMonths(date, delta) {
+    const d = new Date(date);
+    d.setMonth(d.getMonth() + delta);
+    return d;
+  }
+
+  function filterByRange(series) {
+    if (!series.length) return series;
+    const latest = new Date(series[series.length - 1].snapshot_date);
+    const r = STATE.range;
+    if (r.preset === "All") return series;
+    if (r.preset === "Custom") {
+      const s = r.start ? new Date(r.start) : null;
+      const e = r.end ? new Date(r.end) : latest;
+      return series.filter((row) => {
+        const d = new Date(row.snapshot_date);
+        return (!s || d >= s) && d <= e;
+      });
+    }
+    let start;
+    if (r.preset === "YTD") start = new Date(latest.getFullYear(), 0, 1);
+    else if (r.preset === "1M") start = addMonths(latest, -1);
+    else if (r.preset === "3M") start = addMonths(latest, -3);
+    else if (r.preset === "1Y") start = addMonths(latest, -12);
+    else if (r.preset === "5Y") start = addMonths(latest, -60);
+    else return series;
+    return series.filter((row) => new Date(row.snapshot_date) >= start);
+  }
+
+  const RANGE_PRESETS = ["1M", "3M", "YTD", "1Y", "5Y", "All", "Custom"];
+
+  function rangeSelectorHTML() {
+    const buttons = RANGE_PRESETS.map((p) =>
+      '<button class="toggle-btn' + (p === STATE.range.preset ? " active" : "") + '" data-preset="' + p + '">' + p + "</button>"
+    ).join("");
+    return (
+      '<div class="range-selector" id="range-selector">' + buttons + "</div>" +
+      '<div class="custom-range" id="custom-range">' +
+        '<input type="date" id="range-start"> to <input type="date" id="range-end">' +
+        '<button id="apply-range">Apply</button>' +
+      "</div>"
+    );
+  }
+
+  function wireRangeSelector() {
+    const sel = document.getElementById("range-selector");
+    const customWrap = document.getElementById("custom-range");
+    if (!sel) return;
+    customWrap.style.display = STATE.range.preset === "Custom" ? "flex" : "none";
+    if (STATE.range.start) document.getElementById("range-start").value = STATE.range.start;
+    if (STATE.range.end) document.getElementById("range-end").value = STATE.range.end;
+
+    sel.querySelectorAll("button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        STATE.range.preset = btn.dataset.preset;
+        if (btn.dataset.preset === "Custom") {
+          customWrap.style.display = "flex";
+        } else {
+          rerender();
+        }
+      });
+    });
+    document.getElementById("apply-range").addEventListener("click", () => {
+      STATE.range.start = document.getElementById("range-start").value || null;
+      STATE.range.end = document.getElementById("range-end").value || null;
+      rerender();
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Shared series/aggregation helpers
   // ---------------------------------------------------------------------
   function currentSeries() {
-    // Returns an array of rows shaped like net_worth_snapshot, for
-    // whichever owner (or Household) is currently selected.
+    // net_worth_snapshot-shaped rows for whichever owner is selected.
     if (STATE.current === "Household") return STATE.household;
     return STATE.byOwner.filter((r) => r.owner_label === STATE.current);
   }
 
-  function renderAll() {
-    const series = currentSeries();
-    renderHero(series);
-    renderTrendChart(series);
-    renderBreakdown(series);
-    renderAccountsTable();
+  function assetClassEntries(byClassObj) {
+    const entries = Object.entries(byClassObj || {}).filter(([, v]) => v);
+    entries.sort((a, b) => ASSET_CLASS_ORDER.indexOf(a[0]) - ASSET_CLASS_ORDER.indexOf(b[0]));
+    return entries.map(([cls, value]) => ({
+      key: cls,
+      label: ASSET_CLASS_LABEL[cls] || cls,
+      value,
+      color: ASSET_CLASS_COLOR[cls] || "var(--series-8)",
+    }));
   }
 
+  // Daily total for one asset class (liabilities never included in an
+  // asset class), filtered to the currently selected owner. Reuses the
+  // "net_worth" field name so the existing trend-chart renderer -- which
+  // reads series[i].net_worth -- needs no change to plot it.
+  function classDailySeries(assetClass) {
+    const byDate = {};
+    for (const h of STATE.holdings) {
+      if (h.is_liability || h.asset_class !== assetClass) continue;
+      if (STATE.current !== "Household" && h.owner !== STATE.current) continue;
+      byDate[h.snapshot_date] = (byDate[h.snapshot_date] || 0) + h.value;
+    }
+    return Object.keys(byDate).sort().map((date) => ({ snapshot_date: date, net_worth: byDate[date] }));
+  }
+
+  // Composition of one asset class at the latest snapshot date -- grouped
+  // by security for most classes, but by ACCOUNT for cash (there are only
+  // ever one or two cash symbols, CASH.AUD/CASH.USD, so grouping by symbol
+  // there would just show "Cash" once -- grouping by account is what's
+  // actually informative).
+  function classBreakdownAtLatest(assetClass) {
+    const byCash = assetClass === "cash";
+    const byKey = {};
+    for (const h of STATE.holdings) {
+      if (h.snapshot_date !== STATE.latestHoldingsDate) continue;
+      if (h.is_liability || h.asset_class !== assetClass) continue;
+      if (STATE.current !== "Household" && h.owner !== STATE.current) continue;
+      const key = byCash ? h.account_name + "||" + h.institution : h.symbol;
+      if (!byKey[key]) {
+        byKey[key] = { key, label: byCash ? h.account_name : h.display_name, institution: h.institution, value: 0 };
+      }
+      byKey[key].value += h.value;
+    }
+    const entries = Object.values(byKey).filter((e) => e.value);
+    // Alphabetical, stable identity order -- never re-ordered by value, so
+    // a security's colour doesn't shift as its size changes day to day.
+    entries.sort((a, b) => a.label.localeCompare(b.label));
+    entries.forEach((e, i) => { e.color = SERIES_SLOTS[i % SERIES_SLOTS.length]; });
+    return entries;
+  }
+
+  // ---------------------------------------------------------------------
+  // Page: Overview
+  // ---------------------------------------------------------------------
+  function overviewTemplate() {
+    return (
+      '<div class="card">' +
+        "<h2>Net worth</h2>" +
+        '<div id="hero-number" class="tabular">&mdash;</div>' +
+        '<div id="hero-delta" class="tabular"></div>' +
+        '<div id="hero-asof"></div>' +
+        '<div id="liabilities-line" class="tabular"></div>' +
+      "</div>" +
+      '<div class="card">' +
+        "<h2>Net worth over time</h2>" +
+        rangeSelectorHTML() +
+        '<div class="chart-wrap">' +
+          '<svg class="chart" id="trend-chart" viewBox="0 0 800 240" preserveAspectRatio="none"></svg>' +
+          '<div class="chart-tooltip" id="trend-tooltip"></div>' +
+        "</div>" +
+      "</div>" +
+      '<div class="card">' +
+        "<h2>Breakdown by asset class</h2>" +
+        '<div class="donut-wrap">' +
+          '<div class="chart-wrap" style="flex:none;">' +
+            '<svg class="donut" id="donut-chart" viewBox="0 0 200 200"></svg>' +
+            '<div class="chart-tooltip" id="donut-tooltip"></div>' +
+          "</div>" +
+          '<div class="donut-and-bars" id="breakdown-bars"></div>' +
+        "</div>" +
+      "</div>" +
+      '<div class="card">' +
+        "<h2>Accounts</h2>" +
+        '<table class="accounts-table"><thead><tr><th>Account</th><th>Institution</th><th>Owner</th>' +
+        '<th style="text-align:right;">Balance (AUD)</th></tr></thead><tbody id="accounts-tbody"></tbody></table>' +
+      "</div>"
+    );
+  }
+
+  function renderOverview() {
+    document.getElementById("page-root").innerHTML = overviewTemplate();
+    wireRangeSelector();
+
+    const series = currentSeries();
+    renderHero(series);
+    renderTrendChart(filterByRange(series));
+
+    const latest = series[series.length - 1];
+    const classEntries = latest ? assetClassEntries(latest.by_asset_class) : [];
+    renderBarsGeneric("breakdown-bars", classEntries, (e) => { location.hash = "#class=" + encodeURIComponent(e.key); });
+    renderDonut("donut-chart", "donut-tooltip", classEntries, "Total assets");
+
+    const accountRows = STATE.current === "Household" ? STATE.accounts : STATE.accounts.filter((a) => a.owner === STATE.current);
+    renderAccountsTable(accountRows);
+  }
+
+  // ---------------------------------------------------------------------
+  // Page: Asset-class drill-down
+  // ---------------------------------------------------------------------
+  function drilldownTemplate(assetClass) {
+    const label = ASSET_CLASS_LABEL[assetClass] || assetClass;
+    const isCash = assetClass === "cash";
+    const tableHead = isCash
+      ? "<tr><th>Account</th><th>Institution</th><th style=\"text-align:right;\">Balance</th><th style=\"text-align:right;\">% of cash</th></tr>"
+      : "<tr><th>Security</th><th style=\"text-align:right;\">Value</th><th style=\"text-align:right;\">% of " + label + "</th></tr>";
+    return (
+      '<button class="back-link" id="back-btn">&larr; Back to overview</button>' +
+      '<div class="card">' +
+        "<h2>" + label + " total</h2>" +
+        '<div id="hero-number" class="tabular">&mdash;</div>' +
+        '<div id="hero-delta" class="tabular"></div>' +
+        '<div id="hero-asof"></div>' +
+        '<div id="liabilities-line" class="tabular"></div>' +
+      "</div>" +
+      '<div class="card">' +
+        "<h2>" + label + " over time</h2>" +
+        rangeSelectorHTML() +
+        '<div class="chart-wrap">' +
+          '<svg class="chart" id="trend-chart" viewBox="0 0 800 240" preserveAspectRatio="none"></svg>' +
+          '<div class="chart-tooltip" id="trend-tooltip"></div>' +
+        "</div>" +
+      "</div>" +
+      '<div class="card">' +
+        "<h2>" + (isCash ? "Breakdown by account" : "Breakdown by security") + "</h2>" +
+        '<div class="donut-wrap">' +
+          '<div class="chart-wrap" style="flex:none;">' +
+            '<svg class="donut" id="donut-chart" viewBox="0 0 200 200"></svg>' +
+            '<div class="chart-tooltip" id="donut-tooltip"></div>' +
+          "</div>" +
+          '<div class="donut-and-bars" id="breakdown-bars"></div>' +
+        "</div>" +
+      "</div>" +
+      '<div class="card">' +
+        "<h2>" + (isCash ? "Accounts" : "Securities") + "</h2>" +
+        '<table class="accounts-table"><thead>' + tableHead + '</thead><tbody id="securities-tbody"></tbody></table>' +
+      "</div>"
+    );
+  }
+
+  function renderDrillDown(assetClass) {
+    document.getElementById("page-root").innerHTML = drilldownTemplate(assetClass);
+    document.getElementById("back-btn").addEventListener("click", () => { location.hash = ""; });
+    wireRangeSelector();
+
+    const label = ASSET_CLASS_LABEL[assetClass] || assetClass;
+    const series = classDailySeries(assetClass);
+    renderHero(series);
+    renderTrendChart(filterByRange(series));
+
+    const entries = classBreakdownAtLatest(assetClass);
+    renderBarsGeneric("breakdown-bars", entries, null);
+    renderDonut("donut-chart", "donut-tooltip", entries, label);
+    renderSecuritiesTable(entries, assetClass, label);
+  }
+
+  // ---------------------------------------------------------------------
+  // Shared renderers
+  // ---------------------------------------------------------------------
   function renderHero(series) {
     const heroNumber = document.getElementById("hero-number");
     const heroDelta = document.getElementById("hero-delta");
@@ -470,12 +756,13 @@
       return;
     }
     const latest = series[series.length - 1];
-    heroNumber.textContent = fmtMoney(latest.net_worth);
+    const value = latest.net_worth;
+    heroNumber.textContent = fmtMoney(value);
     heroAsOf.textContent = "As of " + fmtDate(latest.snapshot_date);
 
     if (series.length > 1) {
       const prev = series[series.length - 2];
-      const delta = latest.net_worth - prev.net_worth;
+      const delta = value - prev.net_worth;
       const up = delta >= 0;
       heroDelta.innerHTML =
         '<span style="color:' + (up ? "var(--good)" : "var(--critical)") + '">' +
@@ -493,48 +780,32 @@
     }
   }
 
-  function renderBreakdown(series) {
-    const wrap = document.getElementById("breakdown-bars");
+  function renderBarsGeneric(containerId, entries, onClick) {
+    const wrap = document.getElementById(containerId);
     wrap.innerHTML = "";
-    if (!series.length) {
+    if (!entries.length) {
       wrap.textContent = "No data yet.";
       return;
     }
-    const latest = series[series.length - 1];
-    const byClass = latest.by_asset_class || {};
-    const entries = Object.entries(byClass).filter(([, v]) => v);
-    if (!entries.length) {
-      wrap.textContent = "No asset-class data yet.";
-      return;
-    }
-    const max = Math.max(...entries.map(([, v]) => v));
-    // Stable order: known classes first in their fixed slot order, then
-    // anything unrecognised appended (never reordered by value/rank).
-    const order = ["cash", "equity", "etf", "super", "bond", "crypto", "other"];
-    entries.sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
-
-    for (const [cls, value] of entries) {
+    const max = Math.max(...entries.map((e) => e.value));
+    for (const e of entries) {
       const row = document.createElement("div");
-      row.className = "bar-row";
-      const color = ASSET_CLASS_COLOR[cls] || "var(--text-muted)";
-      const label = ASSET_CLASS_LABEL[cls] || cls;
-      const pct = max > 0 ? Math.max(2, (value / max) * 100) : 0;
+      row.className = "bar-row" + (onClick ? " clickable" : "");
+      const pct = max > 0 ? Math.max(2, (e.value / max) * 100) : 0;
       row.innerHTML =
-        '<div class="bar-swatch" style="background:' + color + '"></div>' +
-        '<div class="bar-label">' + label + "</div>" +
-        '<div class="bar-track"><div class="bar-fill" style="width:' + pct + "%;background:" + color + ';"></div></div>' +
-        '<div class="bar-value tabular">' + fmtMoney(value) + "</div>";
+        '<div class="bar-swatch" style="background:' + e.color + '"></div>' +
+        '<div class="bar-label" title="' + e.label + '">' + e.label + "</div>" +
+        '<div class="bar-track"><div class="bar-fill" style="width:' + pct + "%;background:" + e.color + ';"></div></div>' +
+        '<div class="bar-value tabular">' + fmtMoney(e.value) + "</div>" +
+        (onClick ? '<div class="bar-chevron">›</div>' : "");
+      if (onClick) row.addEventListener("click", () => onClick(e));
       wrap.appendChild(row);
     }
   }
 
-  function renderAccountsTable() {
+  function renderAccountsTable(rows) {
     const tbody = document.getElementById("accounts-tbody");
     tbody.innerHTML = "";
-    const rows = STATE.current === "Household"
-      ? STATE.accounts
-      : STATE.accounts.filter((a) => a.owner === STATE.current);
-
     if (!rows.length) {
       tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted);">No accounts to show.</td></tr>';
       return;
@@ -551,22 +822,55 @@
     }
   }
 
+  function renderSecuritiesTable(entries, assetClass, label) {
+    const tbody = document.getElementById("securities-tbody");
+    tbody.innerHTML = "";
+    const isCash = assetClass === "cash";
+    if (!entries.length) {
+      tbody.innerHTML = '<tr><td colspan="' + (isCash ? 4 : 3) + '" style="color:var(--text-muted);">No data yet.</td></tr>';
+      return;
+    }
+    const total = entries.reduce((s, e) => s + e.value, 0);
+    const sorted = entries.slice().sort((a, b) => b.value - a.value);
+    for (const e of sorted) {
+      const pct = total > 0 ? (e.value / total) * 100 : 0;
+      const tr = document.createElement("tr");
+      if (isCash) {
+        tr.innerHTML =
+          "<td>" + e.label + "</td>" +
+          "<td>" + e.institution + "</td>" +
+          '<td class="num tabular">' + fmtMoney(e.value) + "</td>" +
+          '<td class="num tabular">' + fmtPct(pct) + "</td>";
+      } else {
+        tr.innerHTML =
+          "<td>" + e.label + "</td>" +
+          '<td class="num tabular">' + fmtMoney(e.value) + "</td>" +
+          '<td class="num tabular">' + fmtPct(pct) + "</td>";
+      }
+      tbody.appendChild(tr);
+    }
+  }
+
   // ---------------------------------------------------------------------
-  // Trend chart (hand-rolled SVG line chart -- single series, so no
-  // legend is needed; the card title names the series).
+  // Trend chart: hand-rolled SVG line chart. Single series, so no legend
+  // is needed -- the card title names it (dataviz skill: legend only
+  // required for >=2 series).
   // ---------------------------------------------------------------------
   function renderTrendChart(series) {
     const svg = document.getElementById("trend-chart");
     const tooltip = document.getElementById("trend-tooltip");
     svg.innerHTML = "";
 
+    const ns = "http://www.w3.org/2000/svg";
+    const el = (tag, attrs) => {
+      const e = document.createElementNS(ns, tag);
+      for (const k in attrs) e.setAttribute(k, attrs[k]);
+      return e;
+    };
+
     if (series.length < 2) {
-      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      text.setAttribute("x", "400");
-      text.setAttribute("y", "120");
-      text.setAttribute("text-anchor", "middle");
-      text.setAttribute("fill", "var(--text-muted)");
-      text.textContent = "Not enough history yet to chart a trend.";
+      const text = el("text", { x: 400, y: 120, "text-anchor": "middle", fill: "var(--text-muted)" });
+      text.textContent = series.length ? "Not enough history in this range." : "No data yet.";
       svg.appendChild(text);
       return;
     }
@@ -583,14 +887,6 @@
     const xScale = (x) => padL + ((x - xMin) / (xMax - xMin || 1)) * plotW;
     const yScale = (y) => padT + plotH - ((y - yMin) / (yMax - yMin || 1)) * plotH;
 
-    const ns = "http://www.w3.org/2000/svg";
-    const el = (tag, attrs) => {
-      const e = document.createElementNS(ns, tag);
-      for (const k in attrs) e.setAttribute(k, attrs[k]);
-      return e;
-    };
-
-    // Gridlines + y labels (4 bands)
     const gridGroup = el("g", {});
     const ticks = 4;
     for (let i = 0; i <= ticks; i++) {
@@ -603,25 +899,23 @@
     }
     svg.appendChild(gridGroup);
 
-    // Baseline
     svg.appendChild(el("line", { x1: padL, x2: W - padR, y1: yScale(0), y2: yScale(0), stroke: "var(--baseline)", "stroke-width": "1" }));
 
-    // Line path
     let d = "";
     const points = series.map((r, i) => [xScale(xs[i]), yScale(r.net_worth)]);
     points.forEach(([x, y], i) => { d += (i === 0 ? "M" : "L") + x.toFixed(1) + "," + y.toFixed(1) + " "; });
     svg.appendChild(el("path", { d: d.trim(), fill: "none", stroke: "var(--seq-line)", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" }));
 
-    // Last point marker
     const [lx, ly] = points[points.length - 1];
     svg.appendChild(el("circle", { cx: lx, cy: ly, r: "4", fill: "var(--seq-line)" }));
 
-    // X-axis: first/last date labels only, to stay legible regardless of
-    // how many statements are in the series.
-    svg.appendChild(el("text", { x: padL, y: H - 6, "text-anchor": "start", fill: "var(--text-muted)", "font-size": "11" })).textContent = fmtDate(series[0].snapshot_date);
-    svg.appendChild(el("text", { x: W - padR, y: H - 6, "text-anchor": "end", fill: "var(--text-muted)", "font-size": "11" })).textContent = fmtDate(series[series.length - 1].snapshot_date);
+    const firstLabel = el("text", { x: padL, y: H - 6, "text-anchor": "start", fill: "var(--text-muted)", "font-size": "11" });
+    firstLabel.textContent = fmtDate(series[0].snapshot_date);
+    svg.appendChild(firstLabel);
+    const lastLabel = el("text", { x: W - padR, y: H - 6, "text-anchor": "end", fill: "var(--text-muted)", "font-size": "11" });
+    lastLabel.textContent = fmtDate(series[series.length - 1].snapshot_date);
+    svg.appendChild(lastLabel);
 
-    // Hover: invisible wide hit-rect + crosshair, nearest point by x.
     const hitRect = el("rect", { x: padL, y: padT, width: plotW, height: plotH, fill: "transparent" });
     const crosshair = el("line", { x1: 0, x2: 0, y1: padT, y2: padT + plotH, stroke: "var(--baseline)", "stroke-width": "1", style: "display:none" });
     svg.appendChild(crosshair);
@@ -633,7 +927,7 @@
       const mouseX = (evt.clientX - rect.left) * scaleX;
       let nearest = 0, best = Infinity;
       points.forEach(([x], i) => { const dist = Math.abs(x - mouseX); if (dist < best) { best = dist; nearest = i; } });
-      const [px, py] = points[nearest];
+      const [px] = points[nearest];
       crosshair.setAttribute("x1", px); crosshair.setAttribute("x2", px);
       crosshair.style.display = "block";
       const row = series[nearest];
@@ -646,6 +940,75 @@
       crosshair.style.display = "none";
       tooltip.style.display = "none";
     });
+  }
+
+  // ---------------------------------------------------------------------
+  // Donut chart: proportion of each entry within the whole. Entries carry
+  // their own fixed colour (assigned by the caller); labels/legend live in
+  // the accompanying bar list, so this chart itself stays label-free
+  // except for hover and the centre total.
+  // ---------------------------------------------------------------------
+  function donutSlicePath(cx, cy, rInner, rOuter, a0, a1) {
+    const p0o = [cx + rOuter * Math.cos(a0), cy + rOuter * Math.sin(a0)];
+    const p1o = [cx + rOuter * Math.cos(a1), cy + rOuter * Math.sin(a1)];
+    const p1i = [cx + rInner * Math.cos(a1), cy + rInner * Math.sin(a1)];
+    const p0i = [cx + rInner * Math.cos(a0), cy + rInner * Math.sin(a0)];
+    const largeArc = (a1 - a0) > Math.PI ? 1 : 0;
+    return "M" + p0o[0] + "," + p0o[1] +
+      " A" + rOuter + "," + rOuter + " 0 " + largeArc + " 1 " + p1o[0] + "," + p1o[1] +
+      " L" + p1i[0] + "," + p1i[1] +
+      " A" + rInner + "," + rInner + " 0 " + largeArc + " 0 " + p0i[0] + "," + p0i[1] + " Z";
+  }
+
+  function renderDonut(svgId, tooltipId, entries, centerLabel) {
+    const svg = document.getElementById(svgId);
+    const tooltip = document.getElementById(tooltipId);
+    svg.innerHTML = "";
+    const ns = "http://www.w3.org/2000/svg";
+    const el = (tag, attrs) => {
+      const e = document.createElementNS(ns, tag);
+      for (const k in attrs) e.setAttribute(k, attrs[k]);
+      return e;
+    };
+
+    if (!entries.length) {
+      const text = el("text", { x: 100, y: 100, "text-anchor": "middle", fill: "var(--text-muted)", "font-size": "12" });
+      text.textContent = "No data";
+      svg.appendChild(text);
+      return;
+    }
+
+    const total = entries.reduce((s, e) => s + e.value, 0);
+    const cx = 100, cy = 100, rOuter = 92, rInner = 54;
+    const gap = total > 0 ? 0.03 : 0; // radians, ~2px visual gap between slices
+
+    let angle = -Math.PI / 2;
+    entries.forEach((entry) => {
+      const frac = total > 0 ? entry.value / total : 0;
+      const sweep = frac * 2 * Math.PI;
+      const a0 = angle + Math.min(gap / 2, sweep / 4);
+      const a1 = angle + sweep - Math.min(gap / 2, sweep / 4);
+      const path = el("path", { d: donutSlicePath(cx, cy, rInner, rOuter, a0, a1), fill: entry.color });
+      path.addEventListener("mousemove", (evt) => {
+        const rect = svg.getBoundingClientRect();
+        tooltip.style.display = "block";
+        tooltip.style.left = (evt.clientX - rect.left + 12) + "px";
+        tooltip.style.top = (evt.clientY - rect.top - 10) + "px";
+        tooltip.innerHTML = "<strong>" + entry.label + "</strong><br>" + fmtMoney(entry.value) + " (" + fmtPct(frac * 100) + ")";
+      });
+      path.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
+      svg.appendChild(path);
+      angle += sweep;
+    });
+
+    const t1 = el("text", { x: cx, y: cy - 4, "text-anchor": "middle", fill: "var(--text-primary)", "font-size": "16", "font-weight": "700" });
+    t1.textContent = fmtMoneyShort(total);
+    svg.appendChild(t1);
+    if (centerLabel) {
+      const t2 = el("text", { x: cx, y: cy + 15, "text-anchor": "middle", fill: "var(--text-muted)", "font-size": "11" });
+      t2.textContent = centerLabel;
+      svg.appendChild(t2);
+    }
   }
 })();
 </script>
